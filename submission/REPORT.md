@@ -48,7 +48,8 @@
   và [`evidence/test_pii_result.txt`](evidence/test_pii_result.txt).
 - Evidence trace waterfall: trace `7a12658006ca57379d4fe4bff6176823` (lúc có incident) so với
   `8bdf023e34a6eaaaa3a3b65e9963fd99` (lúc khoẻ mạnh), cùng `session_id = k4-challenge-s01`.
-  Chi tiết trong [`evidence/challenge_investigation.md`](evidence/challenge_investigation.md).
+  Chi tiết trong [`evidence/challenge_investigation.md`](evidence/challenge_investigation.md),
+  ảnh waterfall tại [`evidence/trace_waterfall.png`](evidence/trace_waterfall.png).
 
   ```
   trace 7a12658006ca...        start(+ms)   duration(ms)
@@ -84,6 +85,8 @@
   Cả 4 lần chạy dùng **cùng một input** (`"Explain why metrics traces and logs work together."`)
   để khác biệt duy nhất đến từ prompt version.
 
+  Ảnh danh sách hai version: [`evidence/prompt_versions.png`](evidence/prompt_versions.png).
+
 - Bằng chứng đổi label hoặc rollback: dùng `client.update_prompt(name="day13-chat", version=N,
   new_labels=["production"])`, và xác nhận lại bằng `client.get_prompt(..., cache_ttl_seconds=0)`
   sau mỗi bước:
@@ -98,9 +101,14 @@
   rollback về v1 — hai trace này là bằng chứng rollback có hiệu lực thật ở tầng runtime, không
   chỉ đổi nhãn trên giao diện.
 
+  Ảnh nhãn `production` sau khi rollback về v1:
+  [`evidence/prompt_rollback.png`](evidence/prompt_rollback.png).
+
 ## 5. Dashboard, SLO và alerts
 
 - Kết quả `validate_dashboard.py`: `HỢP LỆ: 6/6 panel có trong dashboard contract.`
+  Kết xuất đầy đủ của cả ba lệnh kiểm tra:
+  [`evidence/validator_results.txt`](evidence/validator_results.txt).
 - Evidence dashboard: contract tại [`config/dashboard.yaml`](../config/dashboard.yaml) — 6 panel
   `latency`, `traffic`, `errors`, `cost`, `tokens`, `quality`; time range 60 phút, refresh 30s,
   mỗi panel có `unit` và `threshold` riêng.
@@ -122,7 +130,7 @@
   render đủ 6 panel không exception, không có log vẫn cảnh báo thay vì crash, và ngưỡng
   của mỗi panel phải trỏ vào một phép tổng hợp mà panel thực sự tính.
 
-  Ảnh: `evidence/dashboard_6_panels.png` _(cần chụp thủ công)_.
+  Ảnh: [`evidence/dashboard_6_panels.png`](evidence/dashboard_6_panels.png).
 - SLO đã chọn và lý do: xem [`config/slo.yaml`](../config/slo.yaml). Bốn SLI được chọn để mỗi
   loại incident trong `app/incidents.py` đều có ít nhất một chỉ số bắt được:
   `latency_p95_ms ≤ 3000` (bắt `rag_slow`), `error_rate_pct ≤ 2` (bắt `tool_fail`),
