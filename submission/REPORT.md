@@ -101,9 +101,28 @@
 ## 5. Dashboard, SLO và alerts
 
 - Kết quả `validate_dashboard.py`: `HỢP LỆ: 6/6 panel có trong dashboard contract.`
-- Evidence dashboard: [`config/dashboard.yaml`](../config/dashboard.yaml) — 6 panel
+- Evidence dashboard: contract tại [`config/dashboard.yaml`](../config/dashboard.yaml) — 6 panel
   `latency`, `traffic`, `errors`, `cost`, `tokens`, `quality`; time range 60 phút, refresh 30s,
   mỗi panel có `unit` và `threshold` riêng.
+
+  Dashboard runtime dựng bằng Streamlit tại [`scripts/dashboard_app.py`](../scripts/dashboard_app.py),
+  đọc trực tiếp `data/logs.jsonl` đúng như `docs/DASHBOARD_SETUP.md` quy định:
+
+  ```bash
+  streamlit run scripts/dashboard_app.py
+  ```
+
+  Mọi ngưỡng và đơn vị được **đọc từ `config/dashboard.yaml`** chứ không hard-code, nên
+  contract là nguồn chuẩn duy nhất — sửa YAML thì dashboard đổi theo. Mỗi panel hiển thị
+  trạng thái ĐẠT/VI PHẠM so với threshold của chính nó, và hai panel latency/quality có
+  đường SLO nét đứt. Bảng dữ liệu thô nằm trong expander cuối trang để không phải đọc
+  bằng màu.
+
+  Kiểm chứng bằng `tests/test_dashboard_app.py` (7 test, dùng `streamlit.testing.v1.AppTest`):
+  render đủ 6 panel không exception, không có log vẫn cảnh báo thay vì crash, và ngưỡng
+  của mỗi panel phải trỏ vào một phép tổng hợp mà panel thực sự tính.
+
+  Ảnh: `evidence/dashboard_6_panels.png` _(cần chụp thủ công)_.
 - SLO đã chọn và lý do: xem [`config/slo.yaml`](../config/slo.yaml). Bốn SLI được chọn để mỗi
   loại incident trong `app/incidents.py` đều có ít nhất một chỉ số bắt được:
   `latency_p95_ms ≤ 3000` (bắt `rag_slow`), `error_rate_pct ≤ 2` (bắt `tool_fail`),
