@@ -1,0 +1,12 @@
+=== BEFORE (raw input tu data/sample_queries.jsonl) ===
+{"user_id":"u01","session_id":"s01","feature":"qa","message":"What is your refund policy? My email is student@vinuni.edu.vn"}
+{"user_id":"u05","session_id":"s05","feature":"qa","message":"Here is my phone 0987654321, what should be logged?"}
+{"user_id":"u09","session_id":"s09","feature":"qa","message":"What is the policy for PII and credit card 4111 1111 1111 1111?"}
+
+=== AFTER (da redact, tu data/logs.jsonl) ===
+{"service": "api", "payload": {"message_preview": "What is your refund policy? My email is [REDACTED_EMAIL]"}, "event": "request_received", "level": "info", "ts": "2026-08-11T07:48:39.435609Z"}
+{"service": "api", "payload": {"message_preview": "Here is my phone [REDACTED_PHONE_VN], what should be logged?"}, "event": "request_received", "level": "info", "ts": "2026-08-11T07:48:50.183637Z"}
+{"service": "api", "payload": {"message_preview": "What is the policy for PII and credit card [REDACTED_CREDIT_CARD]?"}, "event": "request_received", "level": "info", "ts": "2026-08-11T07:49:03.403390Z"}
+{"service": "api", "payload": {"message_preview": "What is your refund policy? My email is [REDACTED_EMAIL]"}, "event": "request_received", "level": "info", "ts": "2026-08-11T07:54:06.563576Z"}
+{"service": "api", "payload": {"message_preview": "Here is my phone [REDACTED_PHONE_VN], what should be logged?"}, "event": "request_received", "level": "info", "ts": "2026-08-11T07:54:17.163442Z"}
+{"service": "api", "payload": {"message_preview": "What is the policy for PII and credit card [REDACTED_CREDIT_CARD]?"}, "event": "request_received", "level": "info", "ts": "2026-08-11T07:54:26.384350Z"}
