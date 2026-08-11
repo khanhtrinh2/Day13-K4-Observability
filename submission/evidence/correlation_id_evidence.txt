@@ -1,0 +1,42 @@
+﻿=== CP1 role-A: Correlation ID, log enrichment, exception handler ===
+Ngay: 2026-08-11 | Nhanh: CP1/role-A
+
+--- 1. Baseline TRUOC CP1 (CP0) ---
+Estimated Score: 30/100
+  - Records with missing required fields: 20 (correlation_id = MISSING)
+  - Records with missing enrichment: 20
+  - Unique correlation IDs found: 0
+
+--- 2. load_test.py SAU CP1 (10 request, moi request 1 ID rieng) ---
+[200] req-c78e7f16 | qa | 2663.5ms
+[200] req-d9c2132b | qa | 1093.2ms
+[200] req-be5509e4 | summary | 1120.2ms
+[200] req-a770a912 | qa | 1039.2ms
+[200] req-68cf88e5 | qa | 1078.8ms
+[200] req-ee84c39e | summary | 1198.7ms
+[200] req-546418e8 | qa | 1064.6ms
+[200] req-564fe040 | qa | 1077.9ms
+[200] req-745701b2 | qa | 1100.0ms
+[200] req-59a07e9e | qa | 1073.2ms
+
+--- 3. validate_logs.py SAU CP1 ---
+--- Lab Verification Results ---
+Total log records analyzed: 21
+Records with missing required fields: 0
+Records with missing enrichment (context): 0
+Unique correlation IDs found: 10
+Potential PII leaks detected: 0
+
+--- Grading Scorecard (Estimates) ---
++ [PASSED] Basic JSON schema
++ [PASSED] Correlation ID propagation
++ [PASSED] Log enrichment
++ [PASSED] PII scrubbing
+
+Estimated Score: 100/100
+
+--- 4. Mot request duoc noi tron ven bang correlation_id = req-be5509e4 ---
+(request_received va response_sent cung ID, du enrichment, PII da che)
+
+{"service": "api", "payload": {"message_preview": "Summarize the monitoring policy for production logging"}, "event": "request_received", "feature": "summary", "user_id_hash": "97ce842ec69d", "session_id": "s03", "correlation_id": "req-be5509e4", "env": "dev", "model": "claude-sonnet-4-5", "level": "info", "ts": "2026-08-11T08:31:15.621696Z"}
+{"service": "api", "latency_ms": 1116, "tokens_in": 39, "tokens_out": 121, "cost_usd": 0.001932, "quality_score": 0.8, "payload": {"answer_preview": "Starter answer. Teams should improve this output logic and add better quality ch..."}, "event": "response_sent", "feature": "summary", "user_id_hash": "97ce842ec69d", "session_id": "s03", "correlation_id": "req-be5509e4", "env": "dev", "model": "claude-sonnet-4-5", "level": "info", "ts": "2026-08-11T08:31:16.738909Z"}

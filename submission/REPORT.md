@@ -14,14 +14,20 @@
     (`correlation_id` = `MISSING`), 20 record thiếu enrichment, 0 unique correlation ID.
     Lưu ý: mục PII scrubbing PASSED ngay từ baseline do `summarize_text()` đã scrub sẵn
     `message_preview`, chưa phải nhờ processor `scrub_event`.
-  - Sau CP1:
+  - Sau CP1: **100/100** — 21 bản ghi; 0 record thiếu required field, 0 record thiếu
+    enrichment, 10 unique correlation ID, 0 PII leak.
+    Evidence: [`evidence/correlation_id_evidence.txt`](evidence/correlation_id_evidence.txt).
 - Tổng số traces:
 - Số PII leak còn lại:
 - Link/đường dẫn dashboard:
 
 ## 3. Logging và tracing
 
-- Evidence correlation ID:
+- Evidence correlation ID: [`evidence/correlation_id_evidence.txt`](evidence/correlation_id_evidence.txt)
+  — request `req-be5509e4` nối liền `request_received` → `response_sent` bằng cùng một ID.
+  Middleware gán ID ở `app/middleware.py`, bind vào `structlog.contextvars` **trước** `call_next`
+  nên mọi log phía sau tự mang ID mà không phải truyền tay; ID cũng được trả về client qua header
+  `x-request-id` để người dùng báo lỗi kèm đúng ID cần tra.
 - Evidence PII redaction:
 - Evidence trace waterfall:
 - Giải thích một span đáng chú ý:
@@ -57,4 +63,5 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 
 | Thành viên | Phần việc | Commit/PR | Điều đã học |
 |---|---|---|---|
+| A — Trịnh Bá Khánh Trinh | CP1 Middleware: gán/propagate Correlation ID, enrich log context (`user_id_hash`, `session_id`, `feature`, `model`, `env`), exception handler cho 422/500 | PR `CP1/role-A` | Context phải bind **trước** `call_next` thì log sau mới thừa hưởng; `clear_contextvars()` là bắt buộc vì worker tái sử dụng context giữa các request. Handler của `Exception` nằm ngoài middleware (gắn vào `ServerErrorMiddleware`) nên phải tự set header `x-request-id`, nếu không response lỗi sẽ không truy vết được — đúng lúc cần nhất. |
 | | | | |
