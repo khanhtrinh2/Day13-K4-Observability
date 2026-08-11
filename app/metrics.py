@@ -12,6 +12,19 @@ TRAFFIC: int = 0
 QUALITY_SCORES: list[float] = []
 
 
+def error_rate_pct(success_count: int, error_count: int) -> float:
+    """Return the percentage of completed requests that failed.
+
+    ``TRAFFIC`` stores successful requests because ``record_request`` is called
+    only after the agent finishes. Failed requests are recorded separately, so
+    both counters must be included in the denominator.
+    """
+    total_requests = success_count + error_count
+    if total_requests <= 0:
+        return 0.0
+    return round((error_count / total_requests) * 100, 2)
+
+
 def record_request(latency_ms: int, cost_usd: float, tokens_in: int, tokens_out: int, quality_score: float) -> None:
     global TRAFFIC
     TRAFFIC += 1
@@ -38,8 +51,13 @@ def percentile(values: list[int], p: int) -> float:
 
 
 def snapshot() -> dict:
+    error_count = sum(ERRORS.values())
+    total_requests = TRAFFIC + error_count
     return {
         "traffic": TRAFFIC,
+        "total_requests": total_requests,
+        "error_count": error_count,
+        "error_rate_pct": error_rate_pct(TRAFFIC, error_count),
         "latency_p50": percentile(REQUEST_LATENCIES, 50),
         "latency_p95": percentile(REQUEST_LATENCIES, 95),
         "latency_p99": percentile(REQUEST_LATENCIES, 99),

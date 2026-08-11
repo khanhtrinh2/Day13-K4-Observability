@@ -32,6 +32,19 @@ def test_repository_dashboard_contract_is_valid() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
     assert "6/6 panel" in result.stdout
 
+    payload = yaml.safe_load(
+        (REPO_ROOT / "config" / "dashboard.yaml").read_text(encoding="utf-8")
+    )
+    panels = {panel["id"]: panel for panel in payload["dashboard"]["panels"]}
+    errors = panels["errors"]
+    assert "error_rate_pct" in errors["aggregations"]
+    assert {"request_received", "request_failed"} <= set(errors["events"])
+    assert errors["threshold"] == {
+        "aggregation": "error_rate_pct",
+        "operator": "lte",
+        "value": 2,
+    }
+
 
 def test_validator_rejects_panel_without_threshold(tmp_path: Path) -> None:
     payload = yaml.safe_load(
