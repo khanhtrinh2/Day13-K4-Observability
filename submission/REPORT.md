@@ -9,7 +9,7 @@
 
 | Mã | Họ tên | MSSV | Vai trò |
 |---|---|---|---|
-| A | Trịnh Bá Khánh Trình | | API & Middleware |
+| A | Trịnh Bá Khánh Trình | 2A202601531 | API & Middleware |
 | B | Nguyễn Hoàng Đạt | 2A202601460 | Security Engineer |
 | C | Nguyễn Hữu Tuyến | 2A202601520 | Metrics & Dashboard |
 | D | Nguyễn Văn Phúc | 2A202601350 | SRE & Alerts Engineer |
@@ -208,8 +208,8 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 
 | Thành viên | Phần việc | Commit/PR | Điều đã học |
 |---|---|---|---|
-| A — Trịnh Bá Khánh Trình | CP1 Middleware: gán/propagate Correlation ID, enrich log context (`user_id_hash`, `session_id`, `feature`, `model`, `env`), exception handler cho 422/500 | [PR #4](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/4) (`f0d28e0`), [PR #5](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/5) (`91cf51b`), [PR #1](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/1) (`9e7f153`) | Context phải bind **trước** `call_next` thì log sau mới thừa hưởng; `clear_contextvars()` là bắt buộc vì worker tái sử dụng context giữa các request. Handler của `Exception` nằm ngoài middleware (gắn vào `ServerErrorMiddleware`) nên phải tự set header `x-request-id`, nếu không response lỗi sẽ không truy vết được — đúng lúc cần nhất. Bài học thứ hai: enrichment từng bị mất khi merge nhánh khác (`c6aa5e8`) mà không ai phát hiện, chỉ có test tự viết bắt được — nên test là thứ bảo vệ phần việc của mình. |
-| B — Nguyễn Hoàng Đạt (2A202601460) | CP1 PII Scrubbing: thêm regex patterns (passport, địa chỉ VN), bật processor `scrub_event` trong chain logging, kiểm chứng log không lộ PII | [PR #2](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/2) (`bc86eb3`) | _(tự điền)_ |
+| A — Trịnh Bá Khánh Trình (2A202601531) | CP1 Middleware: gán/propagate Correlation ID, enrich log context (`user_id_hash`, `session_id`, `feature`, `model`, `env`), exception handler cho 422/500 | [PR #4](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/4) (`f0d28e0`), [PR #5](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/5) (`91cf51b`), [PR #1](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/1) (`9e7f153`) | Context phải bind **trước** `call_next` thì log sau mới thừa hưởng; `clear_contextvars()` là bắt buộc vì worker tái sử dụng context giữa các request. Handler của `Exception` nằm ngoài middleware (gắn vào `ServerErrorMiddleware`) nên phải tự set header `x-request-id`, nếu không response lỗi sẽ không truy vết được — đúng lúc cần nhất. Bài học thứ hai: enrichment từng bị mất khi merge nhánh khác (`c6aa5e8`) mà không ai phát hiện, chỉ có test tự viết bắt được — nên test là thứ bảo vệ phần việc của mình. |
+| B — Nguyễn Hoàng Đạt (2A202601460) | CP1 PII Scrubbing: thêm regex patterns (passport, địa chỉ VN), bật processor `scrub_event` trong chain logging, kiểm chứng log không lộ PII | [PR #2](https://github.com/khanhtrinh2/Day13-K4-Observability/pul  l/2) (`bc86eb3`) | _(tự điền)_ |
 | C — Nguyễn Hữu Tuyến (2A202601520) | Triển khai `error_rate_pct` theo tổng số request, thiết kế dashboard 6 nhóm chỉ số (latency, traffic, errors, cost, tokens, quality), viết test và validator | `8bd03d2` — commit đẩy thẳng lên `main`, chưa qua PR | _(tự điền)_ |
 | D — Nguyễn Văn Phúc (2A202601350) | CP2: thiết lập SLO, viết Alert rules và Alert Runbook xử lý sự cố | [PR #3](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/3) (`7e75441`) | _(tự điền)_ |
 | E — Vũ Thành Khang (2A202601866) | Chạy load test, bọc trace cho sub-component RAG/LLM (phần mở rộng), dẫn dắt điều tra Challenge (CP3), hoàn thiện báo cáo nhóm | [PR #6](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/6) (`e6c7b7c`, `c6aa5e8`) | _(tự điền)_ |
