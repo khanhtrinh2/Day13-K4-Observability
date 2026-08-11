@@ -4,7 +4,11 @@
 
 - Tên nhóm: ChanTeam
 - Repository URL: https://github.com/khanhtrinh2/Day13-K4-Observability.git
-- Commit SHA cuối:
+- Commit SHA cuối: `eb65623cee795d0e475c92935a89544c832af1c2`
+  ([`eb65623`](https://github.com/khanhtrinh2/Day13-K4-Observability/commit/eb65623cee795d0e475c92935a89544c832af1c2)
+  — merge PR #10). Đây là commit cuối cùng chứa toàn bộ bài làm: source, config, tests và
+  `submission/`. Commit đứng sau nó chỉ thêm đúng dòng SHA này vào báo cáo, không đổi nội dung
+  bài nộp.
 - Thành viên và vai trò:
 
 | Mã | Họ tên | MSSV | Vai trò |
