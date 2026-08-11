@@ -10,6 +10,11 @@
 ## 2. Kết quả kỹ thuật
 
 - Điểm `validate_logs.py`:
+  - Baseline (CP0, trước khi làm TODO): **30/100** — 21 bản ghi; 20 record thiếu required field
+    (`correlation_id` = `MISSING`), 20 record thiếu enrichment, 0 unique correlation ID.
+    Lưu ý: mục PII scrubbing PASSED ngay từ baseline do `summarize_text()` đã scrub sẵn
+    `message_preview`, chưa phải nhờ processor `scrub_event`.
+  - Sau CP1:
 - Tổng số traces:
 - Số PII leak còn lại:
 - Link/đường dẫn dashboard:
