@@ -46,16 +46,9 @@ async def metrics() -> dict:
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: Request, body: ChatRequest) -> ChatResponse:
-    # Bind trước dòng log đầu tiên để request_received và response_sent dùng
-    # chung một bộ context. user_id thô không bao giờ được ghi xuống log.
-    bind_contextvars(
-        user_id_hash=hash_user_id(body.user_id),
-        session_id=body.session_id,
-        feature=body.feature,
-        model=agent.model,
-        env=os.getenv("APP_ENV", "dev"),
-    )
-
+    # TODO: Enrich logs with request context (user_id_hash, session_id, feature, model, env)
+    # bind_contextvars(...)
+    
     log.info(
         "request_received",
         service="api",
