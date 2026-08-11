@@ -63,5 +63,5 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 
 | Thành viên | Phần việc | Commit/PR | Điều đã học |
 |---|---|---|---|
-| A — Trịnh Bá Khánh Trinh | CP1 Middleware: gán/propagate Correlation ID, enrich log context (`user_id_hash`, `session_id`, `feature`, `model`, `env`), exception handler cho 422/500 | PR `CP1/role-A` | Context phải bind **trước** `call_next` thì log sau mới thừa hưởng; `clear_contextvars()` là bắt buộc vì worker tái sử dụng context giữa các request. Handler của `Exception` nằm ngoài middleware (gắn vào `ServerErrorMiddleware`) nên phải tự set header `x-request-id`, nếu không response lỗi sẽ không truy vết được — đúng lúc cần nhất. |
+| A — Trịnh Bá Khánh Trình | CP1 Middleware: gán/propagate Correlation ID, enrich log context (`user_id_hash`, `session_id`, `feature`, `model`, `env`), exception handler cho 422/500 | PR `CP1/role-A` | Context phải bind **trước** `call_next` thì log sau mới thừa hưởng; `clear_contextvars()` là bắt buộc vì worker tái sử dụng context giữa các request. Handler của `Exception` nằm ngoài middleware (gắn vào `ServerErrorMiddleware`) nên phải tự set header `x-request-id`, nếu không response lỗi sẽ không truy vết được — đúng lúc cần nhất. |
 | | | | |
