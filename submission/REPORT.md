@@ -2,8 +2,8 @@
 
 ## 1. Thông tin nhóm
 
-- Tên nhóm:
-- Repository URL:
+- Tên nhóm: ChanTeam
+- Repository URL: https://github.com/khanhtrinh2/Day13-K4-Observability.git
 - Commit SHA cuối:
 - Thành viên và vai trò:
 
