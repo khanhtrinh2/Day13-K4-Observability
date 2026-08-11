@@ -25,9 +25,17 @@
   - Sau CP1: **100/100** — 21 bản ghi; 0 record thiếu required field, 0 record thiếu
     enrichment, 10 unique correlation ID, 0 PII leak.
     Evidence: [`evidence/correlation_id_evidence.txt`](evidence/correlation_id_evidence.txt).
-- Tổng số traces:
-- Số PII leak còn lại:
-- Link/đường dẫn dashboard:
+  - Sau CP3 (đo lại trên bộ log của challenge): **100/100** — 23 bản ghi, 12 unique correlation
+    ID, 0 record thiếu required field, 0 record thiếu enrichment, 0 PII leak.
+- Tổng số traces: **34** trên Langfuse Cloud (project `My Project`), vượt yêu cầu tối thiểu 10.
+  Ảnh: [`evidence/langfuse_traces_overview.png`](evidence/langfuse_traces_overview.png) — chụp
+  lúc 17:02 khi mới có 20 traces và 40 observations; con số 34 là tổng sau khi chạy thêm
+  phần prompt versioning (CP2) và challenge (CP3).
+- Số PII leak còn lại: **0** — `validate_logs.py` báo `Potential PII leaks detected: 0` trên
+  23 bản ghi; đã kiểm tra thủ công thêm với email, số điện thoại VN và số thẻ test.
+- Link/đường dẫn dashboard: contract tại [`config/dashboard.yaml`](../config/dashboard.yaml),
+  nguồn dữ liệu là `data/logs.jsonl`. `python scripts/validate_dashboard.py` →
+  `HỢP LỆ: 6/6 panel có trong dashboard contract.`
 
 ## 3. Logging và tracing
 
@@ -36,34 +44,136 @@
   Middleware gán ID ở `app/middleware.py`, bind vào `structlog.contextvars` **trước** `call_next`
   nên mọi log phía sau tự mang ID mà không phải truyền tay; ID cũng được trả về client qua header
   `x-request-id` để người dùng báo lỗi kèm đúng ID cần tra.
-- Evidence PII redaction:
-- Evidence trace waterfall:
-- Giải thích một span đáng chú ý:
+- Evidence PII redaction: [`evidence/pii_redaction_evidence.txt`](evidence/pii_redaction_evidence.txt)
+  và [`evidence/test_pii_result.txt`](evidence/test_pii_result.txt).
+- Evidence trace waterfall: trace `7a12658006ca57379d4fe4bff6176823` (lúc có incident) so với
+  `8bdf023e34a6eaaaa3a3b65e9963fd99` (lúc khoẻ mạnh), cùng `session_id = k4-challenge-s01`.
+  Chi tiết trong [`evidence/challenge_investigation.md`](evidence/challenge_investigation.md).
+
+  ```
+  trace 7a12658006ca...        start(+ms)   duration(ms)
+  run                                   0           2652
+  rag.retrieve                          0           2500
+  llm.generate                       2500            151
+  ```
+
+- Giải thích một span đáng chú ý: span **`rag.retrieve`** chiếm **2500/2652 ms = 94%** tổng
+  thời gian request khi incident bật, trong khi span `llm.generate` giữ nguyên 151 ms ở cả hai
+  pha. Chính sự tương phản này loại trừ LLM khỏi diện nghi vấn và chỉ thẳng vào tầng retrieval —
+  điều mà metrics tổng hợp không thể nói được, vì metrics chỉ thấy "request chậm". Nếu không
+  tách span riêng cho từng sub-component thì trace chỉ hiện `run = 2652 ms` và việc điều tra
+  sẽ phải đoán.
 
 ## 4. Prompt versioning
 
-- Prompt name:
-- Version/label baseline:
-- Version/label candidate:
+- Prompt name: `day13-chat` (text prompt, giữ nguyên 3 biến `{{feature}}`, `{{docs}}`, `{{message}}`
+  theo contract trong [`docs/PROMPT_VERSIONING.md`](../docs/PROMPT_VERSIONING.md)).
+- Version/label baseline: **version 1**, labels `baseline` + `production`. Nội dung là template
+  gốc `DEFAULT_PROMPT_TEMPLATE` trong `app/prompt_management.py`.
+- Version/label candidate: **version 2**, label `candidate`. Thay đổi nhỏ: thêm ràng buộc
+  *"Answer in at most 3 sentences. Cite the retrieved docs when they are relevant."*
 - Trace ID của mỗi version:
-- Bằng chứng đổi label hoặc rollback:
+
+  | Bước | Label dùng | Version resolve được | Trace ID |
+  |---|---|---|---|
+  | Chạy với baseline | `baseline` | v1 | `64a33bc0686fb44aa8bd2a22dc88493c` |
+  | Chạy với candidate | `candidate` | v2 | `57cabc526bb667bbdefece8621f1c147` |
+  | Sau khi promote | `production` | **v2** | `14f79347a832e7de05762444193439cc` |
+  | Sau khi rollback | `production` | **v1** | `8ecf553d498e05380cf0e682e894a777` |
+
+  Cả 4 lần chạy dùng **cùng một input** (`"Explain why metrics traces and logs work together."`)
+  để khác biệt duy nhất đến từ prompt version.
+
+- Bằng chứng đổi label hoặc rollback: dùng `client.update_prompt(name="day13-chat", version=N,
+  new_labels=["production"])`, và xác nhận lại bằng `client.get_prompt(..., cache_ttl_seconds=0)`
+  sau mỗi bước:
+
+  ```
+  TRUOC        : production -> version 1
+  SAU PROMOTE  : production -> version 2
+  SAU ROLLBACK : production -> version 1
+  ```
+
+  Trace `14f79347...` chạy khi `production` đang trỏ v2, trace `8ecf553d...` chạy sau khi đã
+  rollback về v1 — hai trace này là bằng chứng rollback có hiệu lực thật ở tầng runtime, không
+  chỉ đổi nhãn trên giao diện.
 
 ## 5. Dashboard, SLO và alerts
 
-- Kết quả `validate_dashboard.py`:
-- Evidence dashboard:
-- SLO đã chọn và lý do:
-- Alert rules và runbook:
+- Kết quả `validate_dashboard.py`: `HỢP LỆ: 6/6 panel có trong dashboard contract.`
+- Evidence dashboard: [`config/dashboard.yaml`](../config/dashboard.yaml) — 6 panel
+  `latency`, `traffic`, `errors`, `cost`, `tokens`, `quality`; time range 60 phút, refresh 30s,
+  mỗi panel có `unit` và `threshold` riêng.
+- SLO đã chọn và lý do: xem [`config/slo.yaml`](../config/slo.yaml). Bốn SLI được chọn để mỗi
+  loại incident trong `app/incidents.py` đều có ít nhất một chỉ số bắt được:
+  `latency_p95_ms ≤ 3000` (bắt `rag_slow`), `error_rate_pct ≤ 2` (bắt `tool_fail`),
+  `daily_cost_usd ≤ 2.5` (bắt `cost_spike`), `quality_score_avg ≥ 0.75`.
+- Alert rules và runbook: 3 alert trong [`config/alert_rules.yaml`](../config/alert_rules.yaml)
+  (`HighLatencyP95`, `HighErrorRate`, `DailyCostBudgetBurn`), runbook tại
+  [`docs/alerts.md`](../docs/alerts.md).
+
+### Khoảng trống phát hiện được khi chạy challenge thật
+
+Incident `rag_slow` đẩy `latency_p95` lên **2682 ms** và giữ `error_rate_pct` ở **0%**.
+Đối chiếu với 3 alert đang cấu hình:
+
+| Alert | Điều kiện | Giá trị thực tế | Có kêu không? |
+|---|---|---|---|
+| `HighLatencyP95` | `latency_p95_ms > 3000 for 5m` | 2682 ms | **Không** |
+| `HighErrorRate` | `error_rate_pct > 2 for 5m` | 0% | **Không** |
+| `DailyCostBudgetBurn` | `daily_cost_usd > 2.5 for 10m` | $0.02 | **Không** |
+
+Nghĩa là bộ alert hiện tại **để lọt hoàn toàn** sự cố của challenge, dù người dùng phải chờ
+gấp 17 lần bình thường. Nguyên nhân: ngưỡng 3000 ms được đặt cao hơn `latency_threshold_ms = 2000`
+mà `config/challenge.json` quy định.
+
+**Đề xuất:** hạ `latency_p95_ms` objective từ 3000 xuống **2000 ms** cho khớp ngưỡng của
+challenge, và sửa điều kiện `HighLatencyP95` thành `latency_p95_ms > 2000 for 5m`. Nhóm ghi
+nhận đây là khoảng trống chưa sửa tại thời điểm nộp, không phải là thiết kế có chủ đích.
 
 ## 6. Điều tra challenge
 
-- Challenge ID:
-- Triệu chứng từ metrics:
-- Trace ID liên quan:
-- Log line/correlation ID liên quan:
-- Root cause:
-- Fix action:
+Chi tiết đầy đủ: [`evidence/challenge_investigation.md`](evidence/challenge_investigation.md).
+
+- Challenge ID: `day13-k4-observability-v1` (cohort K4, incident `rag_slow`,
+  `affected_feature = monitoring`, `latency_threshold_ms = 2000`, seed 1304).
+- Triệu chứng từ metrics: **thuần tuý latency, không có lỗi.** So sánh 5 request trước và
+  5 request sau khi bật incident, cùng bộ input của challenge:
+
+  | Chỉ số | Trước | Sau | |
+  |---|---|---|---|
+  | latency p50 | 152 ms | **2652 ms** | ×17.4 |
+  | latency p95 | 1099 ms | **2682 ms** | vượt ngưỡng 2000 ms |
+  | error_rate_pct | 0% | **0%** | không đổi |
+  | quality_score avg | 0.840 | 0.840 | không đổi |
+
+  Điểm mấu chốt: `error_rate_pct` giữ nguyên 0%. Nếu chỉ theo dõi error rate thì sự cố này
+  vô hình.
+
+- Trace ID liên quan: `7a12658006ca57379d4fe4bff6176823` (có incident) so với
+  `8bdf023e34a6eaaaa3a3b65e9963fd99` (khoẻ mạnh). Span `rag.retrieve` = **2500/2652 ms (94%)**
+  khi có incident, và **0 ms** khi khoẻ mạnh; span `llm.generate` giữ nguyên 151 ms ở cả hai —
+  loại trừ LLM khỏi diện nghi vấn.
+- Log line/correlation ID liên quan: `req-07aec384` (`session_id = k4-challenge-s01`,
+  `feature = monitoring`, `user_id_hash = f00ba60b3772`). Log ghi `latency_ms = 2651`, khớp với
+  span `run` trong trace, và có `response_sent` chứ không có `request_failed` — xác nhận request
+  **thành công nhưng chậm**.
+- Root cause: `app/mock_rag.py:19-20` — `if STATE["rag_slow"]: time.sleep(2.5)`. Vector store
+  retrieval bị chèn độ trễ cố định 2.5 giây. Toàn bộ phần tăng thêm của latency đến từ đây,
+  không phải từ LLM, mạng hay tăng tải.
+- Fix action: tắt incident bằng `python scripts/inject_incident.py --disable` (đã xác nhận
+  `{'rag_slow': False}`, p50 trở lại ~152 ms). Với sự cố thật tương đương: đặt timeout cho
+  `retrieve()` và trả fallback answer thay vì để request treo, kèm circuit breaker cho vector store.
 - Preventive measure:
+  1. **Alert theo latency, không chỉ theo error rate** — xem khoảng trống đã phân tích ở mục 5.
+  2. **Không gọi code chặn trong endpoint `async`.** `/chat` khai báo `async def` nhưng gọi
+     `agent.run()` đồng bộ có `time.sleep`, làm nghẽn cả event loop. Chạy `--concurrency 5`,
+     client đo được **10.6–13.3 s** trong khi app chỉ ghi `latency_ms = 2651 ms` — 5 request bị
+     xếp hàng tuần tự. Nên chuyển `/chat` sang `def` thường để FastAPI tự đẩy sang threadpool.
+  3. **Giám sát chênh lệch giữa `x-response-time-ms` (middleware đo, gồm cả thời gian chờ) và
+     `latency_ms` (đo bên trong handler).** Khoảng cách giãn ra là dấu hiệu sớm của nghẽn hàng đợi.
+  4. **Giữ trace riêng cho từng sub-component.** Không có span `rag.retrieve` tách biệt thì trace
+     chỉ hiện `run = 2652 ms` và điều tra sẽ phải đoán.
 
 ## 7. Đóng góp cá nhân
 
