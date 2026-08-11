@@ -49,7 +49,10 @@
 - Evidence trace waterfall: trace `7a12658006ca57379d4fe4bff6176823` (lúc có incident) so với
   `8bdf023e34a6eaaaa3a3b65e9963fd99` (lúc khoẻ mạnh), cùng `session_id = k4-challenge-s01`.
   Chi tiết trong [`evidence/challenge_investigation.md`](evidence/challenge_investigation.md),
-  ảnh waterfall tại [`evidence/trace_waterfall.png`](evidence/trace_waterfall.png).
+  ảnh danh sách observation tại [`evidence/trace_waterfall.png`](evidence/trace_waterfall.png)
+  — thấy rõ ba loại span `run`, `rag.retrieve`, `llm.generate` được sinh cho mỗi request,
+  tổng 34 GENERATION và 66 SPAN. Số liệu thời lượng từng span bên dưới lấy trực tiếp qua
+  Langfuse API (`client.api.trace.get`), không đọc bằng mắt từ ảnh.
 
   ```
   trace 7a12658006ca...        start(+ms)   duration(ms)
@@ -85,7 +88,8 @@
   Cả 4 lần chạy dùng **cùng một input** (`"Explain why metrics traces and logs work together."`)
   để khác biệt duy nhất đến từ prompt version.
 
-  Ảnh danh sách hai version: [`evidence/prompt_versions.png`](evidence/prompt_versions.png).
+  Ảnh danh sách hai version: [`evidence/prompt_versions.png`](evidence/prompt_versions.png)
+  — `#1` mang nhãn `production` + `baseline`, `#2` mang nhãn `candidate` + `latest`.
 
 - Bằng chứng đổi label hoặc rollback: dùng `client.update_prompt(name="day13-chat", version=N,
   new_labels=["production"])`, và xác nhận lại bằng `client.get_prompt(..., cache_ttl_seconds=0)`
@@ -101,8 +105,10 @@
   rollback về v1 — hai trace này là bằng chứng rollback có hiệu lực thật ở tầng runtime, không
   chỉ đổi nhãn trên giao diện.
 
-  Ảnh nhãn `production` sau khi rollback về v1:
-  [`evidence/prompt_rollback.png`](evidence/prompt_rollback.png).
+  Ảnh sau khi rollback: [`evidence/prompt_rollback.png`](evidence/prompt_rollback.png) — đang mở
+  nội dung `#2 candidate` (có thêm dòng *"Answer in at most 3 sentences…"* so với v1), và cột
+  bên trái cho thấy nhãn `production` **đã nằm lại ở `#1`**. Đối chiếu với
+  `evidence/prompt_versions.png` là thấy `production` từng ở v2 rồi quay về v1.
 
 ## 5. Dashboard, SLO và alerts
 
@@ -209,7 +215,7 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 | Thành viên | Phần việc | Commit/PR | Điều đã học |
 |---|---|---|---|
 | A — Trịnh Bá Khánh Trình (2A202601531) | CP1 Middleware: gán/propagate Correlation ID, enrich log context (`user_id_hash`, `session_id`, `feature`, `model`, `env`), exception handler cho 422/500 | [PR #4](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/4) (`f0d28e0`), [PR #5](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/5) (`91cf51b`), [PR #1](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/1) (`9e7f153`) | Context phải bind **trước** `call_next` thì log sau mới thừa hưởng; `clear_contextvars()` là bắt buộc vì worker tái sử dụng context giữa các request. Handler của `Exception` nằm ngoài middleware (gắn vào `ServerErrorMiddleware`) nên phải tự set header `x-request-id`, nếu không response lỗi sẽ không truy vết được — đúng lúc cần nhất. Bài học thứ hai: enrichment từng bị mất khi merge nhánh khác (`c6aa5e8`) mà không ai phát hiện, chỉ có test tự viết bắt được — nên test là thứ bảo vệ phần việc của mình. |
-| B — Nguyễn Hoàng Đạt (2A202601460) | CP1 PII Scrubbing: thêm regex patterns (passport, địa chỉ VN), bật processor `scrub_event` trong chain logging, kiểm chứng log không lộ PII | [PR #2](https://github.com/khanhtrinh2/Day13-K4-Observability/pul  l/2) (`bc86eb3`) | _(tự điền)_ |
-| C — Nguyễn Hữu Tuyến (2A202601520) | Triển khai `error_rate_pct` theo tổng số request, thiết kế dashboard 6 nhóm chỉ số (latency, traffic, errors, cost, tokens, quality), viết test và validator | `8bd03d2` — commit đẩy thẳng lên `main`, chưa qua PR | _(tự điền)_ |
-| D — Nguyễn Văn Phúc (2A202601350) | CP2: thiết lập SLO, viết Alert rules và Alert Runbook xử lý sự cố | [PR #3](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/3) (`7e75441`) | _(tự điền)_ |
-| E — Vũ Thành Khang (2A202601866) | Chạy load test, bọc trace cho sub-component RAG/LLM (phần mở rộng), dẫn dắt điều tra Challenge (CP3), hoàn thiện báo cáo nhóm | [PR #6](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/6) (`e6c7b7c`, `c6aa5e8`) | _(tự điền)_ |
+| B — Nguyễn Hoàng Đạt (2A202601460) | CP1 PII Scrubbing: thêm regex patterns (passport, địa chỉ VN), bật processor `scrub_event` trong chain logging, kiểm chứng log không lộ PII | [PR #2](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/2) (`bc86eb3`) | Thứ tự processor quyết định tất cả: `scrub_event` phải nằm **trước** `JsonlFileProcessor` và `JSONRenderer`, vì hai cái sau ghi thẳng xuống file — đặt sau thì dữ liệu thô đã nằm trên đĩa rồi mới bị che, tức là không che gì cả. Bài học thứ hai: mục PII của `validate_logs.py` PASS ngay từ baseline khi processor còn **chưa bật**, chỉ vì `summarize_text()` đã che sẵn `message_preview`. Qua validator không đồng nghĩa log sạch — phải có lớp phòng vệ cho cả những trường không đi qua `summarize_text`. |
+| C — Nguyễn Hữu Tuyến (2A202601520) | Triển khai `error_rate_pct` theo tổng số request, thiết kế dashboard 6 nhóm chỉ số (latency, traffic, errors, cost, tokens, quality), viết test và validator | `8bd03d2` — commit đẩy thẳng lên `main`, chưa qua PR | Chọn mẫu số là chọn ý nghĩa của chỉ số. `TRAFFIC` chỉ đếm request **thành công** vì `record_request` chạy sau khi agent xong; nếu lấy nó làm mẫu số thì request lỗi biến mất khỏi cả tử lẫn mẫu và error rate bị báo thấp hơn thực tế — nên phải cộng `error_count` vào mẫu số. Bài học thứ hai: đưa threshold và đơn vị vào `config/dashboard.yaml` thay vì viết cứng trong code biểu đồ, nhờ vậy dashboard runtime dựng sau này đọc thẳng contract và không thể lệch khỏi tiêu chí chấm. |
+| D — Nguyễn Văn Phúc (2A202601350) | CP2: thiết lập SLO, viết Alert rules và Alert Runbook xử lý sự cố | [PR #3](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/3) (`7e75441`) | Mỗi SLI nên gắn với một lớp sự cố mà nó thực sự bắt được — `latency_p95_ms` cho `rag_slow`, `error_rate_pct` cho `tool_fail`, `daily_cost_usd` cho `cost_spike`. Bài học đắt nhất đến từ lúc chạy challenge thật: ngưỡng `> 3000 ms` được đặt theo cảm tính, trong khi sự cố chỉ đẩy p95 lên 2682 ms và error rate đứng yên ở 0% — **cả ba alert đều im lặng** dù người dùng chờ gấp 17 lần. Ngưỡng phải suy ra từ số đo của sự cố thật (`latency_threshold_ms = 2000`), không phải đoán. |
+| E — Vũ Thành Khang (2A202601866) | Chạy load test, bọc trace cho sub-component RAG/LLM (phần mở rộng), dẫn dắt điều tra Challenge (CP3), hoàn thiện báo cáo nhóm | [PR #6](https://github.com/khanhtrinh2/Day13-K4-Observability/pull/6) (`e6c7b7c`, `c6aa5e8`) | Việc tách span cho từng sub-component là thứ biến điều tra từ đoán mò thành chứng minh: không có `rag.retrieve` và `llm.generate` riêng thì trace chỉ hiện `run = 2652 ms`, còn khi tách ra thì thấy ngay retrieval chiếm 94% và LLM vô can. Bài học thứ hai đến từ chính commit merge `c6aa5e8`: giải quyết conflict bằng cách giữ lại comment `TODO` đã âm thầm xoá mất phần enrichment của thành viên A, không ai phát hiện cho tới khi chạy test. Phải chạy `pytest -q` **trước** khi merge, và khi conflict thì đọc kỹ bên mình đang bỏ đi cái gì. |
